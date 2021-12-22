@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "myFoo": {
+      "description": "Some Test",
+      "title": "SOME/TEST",
+      "properties": {
+        "bar": {
+          "properties": {
+            "foo": {
+              "title": "FOO-ME",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "title": "BAR\\IT",
+          "type": "object"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

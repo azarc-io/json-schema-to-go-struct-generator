@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "dup1": {
+      "title": "Foo",
+      "properties": {
+        "p1": {
+          "title": "Property1",
+          "type": "string"
+        },
+        "p2": {
+          "title": "Property2",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "dup2": {
+      "title": "Foo",
+      "properties": {
+        "p2": {
+          "title": "Property2",
+          "type": "string"
+        },
+        "p3": {
+          "title": "Property3",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "dup3": {
+      "title": "Foo",
+      "properties": {
+        "p1": {
+          "title": "Property1",
+          "type": "string"
+        },
+        "p2": {
+          "title": "Property2",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

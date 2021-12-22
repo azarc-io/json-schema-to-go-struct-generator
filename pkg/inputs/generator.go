@@ -2,9 +2,11 @@ package inputs
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"unicode"
 )
@@ -259,9 +261,19 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 			strct.AdditionalType = "false"
 		}
 	}
+
+	//if this struct already exists, then check to see if it's a different signature
+	if prevStruct,ok := g.Structs[strct.Name]; ok {
+		if prevStruct.getUniqueSig() != strct.getUniqueSig() {
+			//different signature, override the name
+			strct.Name = strct.getUniqueSig()
+		}
+	}
+
 	g.Structs[strct.Name] = strct
+
 	// objects are always a pointer
-	return getPrimitiveTypeName("object", name, true)
+	return getPrimitiveTypeName("object", strct.Name, true)
 }
 
 func Contains(s []string, e string) bool {
@@ -390,6 +402,17 @@ type Struct struct {
 
 	GenerateCode   bool
 	AdditionalType string
+}
+
+func (s *Struct) getUniqueSig() string {
+	var allNames []string
+	for _, field := range s.Fields {
+		allNames = append(allNames, field.Name)
+	}
+
+	sort.Strings(allNames)
+	hash := sha1.Sum([]byte(strings.Join(allNames, "")))
+	return fmt.Sprintf("%s_%x", s.Name, hash[0:5])
 }
 
 // Field defines the data required to generate a field in Go.

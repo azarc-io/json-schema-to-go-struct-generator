@@ -544,7 +544,7 @@ func TestThatJavascriptKeyNamesCanBeConvertedToValidGoNames(t *testing.T) {
 		{
 			description: "Not allowed to start with a number.",
 			input:       "123ABC",
-			expected:    "_123ABC",
+			expected:    "_123abc",
 		},
 	}
 

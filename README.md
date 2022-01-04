@@ -1,4 +1,7 @@
-# generate
+# json-schema-to-go-struct-generator
+
+[![build-test](https://github.com/azarc-io/json-schema-to-go-struct-generator/actions/workflows/workflow.yml/badge.svg)](https://github.com/azarc-io/json-schema-to-go-struct-generator/actions/workflows/workflow.yml)
+[![golangci-lint](https://github.com/azarc-io/json-schema-to-go-struct-generator/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/azarc-io/json-schema-to-go-struct-generator/actions/workflows/golangci-lint.yml)
 
 A library to generate go models from given json files
 

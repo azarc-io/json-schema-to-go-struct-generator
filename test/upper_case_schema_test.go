@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/azarc-io/json-schema-to-go-struct-generator/pkg/converter"
-	"github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/upper-case-titles/upper-case-schema"
+	models "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/upper-case-titles/upper-case-schema"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"

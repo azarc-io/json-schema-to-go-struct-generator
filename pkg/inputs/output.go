@@ -96,7 +96,10 @@ func Output(w io.Writer, g *Generator, pkg string, originatingPath string) {
 	}
 
 	// write code after structs for clarity
-	w.Write(codeBuf.Bytes())
+	_,err := w.Write(codeBuf.Bytes())
+	if err != nil {
+		fmt.Printf("error writing bytes: %s", err)
+	}
 }
 
 func emitMarshalCode(w io.Writer, s Struct, imports map[string]bool) {
@@ -268,7 +271,7 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
 }
 
 func outputNameAndDescriptionComment(name, description string, w io.Writer) {
-	if strings.Index(description, "\n") == -1 {
+	if !strings.Contains(description, "\n") {
 		fmt.Fprintf(w, "// %s %s\n", name, description)
 		return
 	}
@@ -278,7 +281,7 @@ func outputNameAndDescriptionComment(name, description string, w io.Writer) {
 }
 
 func outputFieldDescriptionComment(description string, w io.Writer) {
-	if strings.Index(description, "\n") == -1 {
+	if !strings.Contains(description, "\n") {
 		fmt.Fprintf(w, "\n  // %s\n", description)
 		return
 	}

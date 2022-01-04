@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/duplicate-struct-name-overrides/duplicate-struct-name-overrides-schema"
+	models "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/duplicate-struct-name-overrides/duplicate-struct-name-overrides-schema"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

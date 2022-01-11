@@ -2,11 +2,11 @@ package test
 
 import (
 	"encoding/json"
-	gen "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/marshal/test"
+	gen "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/marshal"
 	"testing"
 )
 
-//go:generate go run ../cmd/main.go --input ./samples/marshal --output ./generated/marshal
+//go:generate go run ../cmd/main.go --input ./samples/marshal --output ./generated/marshal/model.go
 
 func TestThatJSONCanBeRoundtrippedUsingGeneratedStructs(t *testing.T) {
 	j := `{"address":{"county":"countyValue"},"name":"nameValue"}`

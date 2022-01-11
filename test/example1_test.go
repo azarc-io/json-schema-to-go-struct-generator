@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	example1 "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/example1/example1a"
+	example1 "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/example1"
 )
 
-//go:generate go run ../cmd/main.go --input ./samples/example1 --output ./generated/example1
+//go:generate go run ../cmd/main.go --input ./samples/example1 --output ./generated/example1/model.go
 
 func TestExample1(t *testing.T) {
 	params := []struct {

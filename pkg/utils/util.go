@@ -4,9 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
 )
 
 func FileNameCreation(fileName string) string {
@@ -49,17 +47,33 @@ func ReadFiles(inputPath string) ([]string, error) {
 	return filePaths, nil
 }
 
-// PackageFormat formatting the package name and the Directory Name
-func PackageFormat(outputDir string, file string) (packageDirectory string, packageName string) {
-	parts := strings.Split(filepath.Base(file), ".")
-	packageDirectory = path.Join(outputDir, parts[0])
-	packageName = "models"
-	return
+type Flags struct {
+	InputDir   string
+	OutputPath string
 }
 
-func ParseFlags() (string, string) {
-	inputDir := flag.String("input", "../schemas", "Please Enter The Input Directory")
-	outputDir := flag.String("output", "../output", "Please Enter The Input Directory")
+func ParseFlags() Flags {
+	inputDir := flag.String("input", "../schemas", "Please enter the input directory")
+	outputPath := flag.String("output", "../output.go", "Please enter the target output go file")
 	flag.Parse()
-	return *inputDir, *outputDir
+
+	return Flags{
+		InputDir:  *inputDir,
+		OutputPath: *outputPath,
+	}
+}
+
+func Unique(slice []string) []string {
+	// create a map with all the values as key
+	uniqMap := make(map[string]struct{})
+	for _, v := range slice {
+		uniqMap[v] = struct{}{}
+	}
+
+	// turn the map keys into a slice
+	uniqSlice := make([]string, 0, len(uniqMap))
+	for v := range uniqMap {
+		uniqSlice = append(uniqSlice, v)
+	}
+	return uniqSlice
 }

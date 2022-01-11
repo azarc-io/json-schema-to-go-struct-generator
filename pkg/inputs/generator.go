@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"github.com/azarc-io/json-schema-to-go-struct-generator/pkg/utils"
 	"regexp"
 	"sort"
 	"strings"
@@ -49,11 +50,11 @@ func (g *Generator) CreateTypes() (err error) {
 		// ugh: if it was anything but a struct the type will not be the name...
 		if rootType != "*"+name {
 			a := Field{
-				Name:        name,
-				JSONName:    "",
-				Type:        rootType,
-				Required:    false,
-				Description: schema.Description,
+				Name:         name,
+				JSONName:     "",
+				Type:         rootType,
+				Required:     false,
+				Descriptions: []string{schema.Description},
 			}
 			g.Aliases[a.Name] = a
 		}
@@ -151,8 +152,13 @@ func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string
 // schema: items element
 func (g *Generator) processArray(name string, schema *Schema) (typeStr string, err error) {
 	if schema.Items != nil {
+		propName := name
+		if ! strings.HasSuffix(propName, "Items") {
+			propName += "Items"
+		}
+
 		// subType: fallback name in case this array Contains inline object without a title
-		subName := g.getSchemaName(name+"Items", schema.Items)
+		subName := g.getSchemaName(propName, schema.Items)
 		subTyp, err := g.processSchema(subName, schema.Items)
 		if err != nil {
 			return "", err
@@ -164,11 +170,11 @@ func (g *Generator) processArray(name string, schema *Schema) (typeStr string, e
 		// only alias root arrays
 		if schema.Parent == nil {
 			array := Field{
-				Name:        name,
-				JSONName:    "",
-				Type:        finalType,
-				Required:    Contains(schema.Required, name),
-				Description: schema.Description,
+				Name:         name,
+				JSONName:     "",
+				Type:         finalType,
+				Required:     Contains(schema.Required, name),
+				Descriptions: []string{schema.Description},
 			}
 			g.Aliases[array.Name] = array
 		}
@@ -189,6 +195,7 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 	}
 	// cache the object name in case any sub-schemas recursively reference it
 	schema.GeneratedType = "*" + name
+
 	// regular properties
 	for propKey, prop := range schema.Properties {
 		fieldName := GetGolangName(propKey)
@@ -199,11 +206,11 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 			return "", err
 		}
 		f := Field{
-			Name:        fieldName,
-			JSONName:    propKey,
-			Type:        fieldType,
-			Required:    Contains(schema.Required, propKey),
-			Description: prop.Description,
+			Name:         fieldName,
+			JSONName:     propKey,
+			Type:         fieldType,
+			Required:     Contains(schema.Required, propKey),
+			Descriptions: []string{prop.Description},
 		}
 		if f.Required {
 			strct.GenerateCode = true
@@ -232,11 +239,11 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 		}
 		// this struct will have both regular and additional properties
 		f := Field{
-			Name:        "AdditionalProperties",
-			JSONName:    "-",
-			Type:        mapTyp,
-			Required:    false,
-			Description: "",
+			Name:         "AdditionalProperties",
+			JSONName:     "-",
+			Type:         mapTyp,
+			Required:     false,
+			Descriptions: []string{},
 		}
 		strct.Fields[f.Name] = f
 		// setting this will cause marshal code to be emitted in Output()
@@ -249,11 +256,11 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 			// everything is valid additional
 			subTyp := "map[string]interface{}"
 			f := Field{
-				Name:        "AdditionalProperties",
-				JSONName:    "-",
-				Type:        subTyp,
-				Required:    false,
-				Description: "",
+				Name:         "AdditionalProperties",
+				JSONName:     "-",
+				Type:         subTyp,
+				Required:     false,
+				Descriptions: []string{},
 			}
 			strct.Fields[f.Name] = f
 			// setting this will cause marshal code to be emitted in Output()
@@ -268,13 +275,18 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 
 	//if this struct already exists, then check to see if it's a different signature
 	if prevStruct,ok := g.Structs[strct.Name]; ok {
-		if prevStruct.getUniqueSig() != strct.getUniqueSig() {
-			//different signature, override the name
+		if structToUse := strct.unifiedWith(&prevStruct); structToUse != nil {
+			//these structs were unified, use the return as the unified version
+			g.Structs[structToUse.Name] = *structToUse
+		} else {
+			//structs cannot be unified, set as different struct
 			strct.Name = strct.getUniqueSig()
+			g.Structs[strct.Name] = strct
 		}
+	} else {
+		g.Structs[strct.Name] = strct
 	}
 
-	g.Structs[strct.Name] = strct
 
 	// objects are always a pointer
 	return getPrimitiveTypeName("object", strct.Name, true)
@@ -409,14 +421,44 @@ type Struct struct {
 }
 
 func (s *Struct) getUniqueSig() string {
-	var allNames []string
+	var allFieldDescr []string
 	for _, field := range s.Fields {
-		allNames = append(allNames, field.Name)
+		allFieldDescr = append(allFieldDescr, field.Name + field.Type)
 	}
 
-	sort.Strings(allNames)
-	hash := sha1.Sum([]byte(strings.Join(allNames, "")))
+	sort.Strings(allFieldDescr)
+	hash := sha1.Sum([]byte(strings.Join(allFieldDescr, "")))
 	return fmt.Sprintf("%s_%x", s.Name, hash[0:5])
+}
+
+func (s *Struct) unifiedWith(other *Struct) *Struct {
+	leastFieldsStruct := s
+	mostFieldsStruct := other
+	if len(s.Fields) > len(other.Fields) {
+		leastFieldsStruct = other
+		mostFieldsStruct = s
+	}
+
+	//check if all fields from the "leastFields" are available in "mostFields"
+	for _, leastField := range leastFieldsStruct.Fields {
+		if mostField,ok := mostFieldsStruct.Fields[leastField.Name]; ok {
+			if mostField.Type != leastField.Type {
+				return nil
+			}
+		} else {
+			return nil
+		}
+	}
+
+	//all fields are matchable, merge them together
+	for _, field := range leastFieldsStruct.Fields {
+		if keptField,ok := mostFieldsStruct.Fields[field.Name]; ok {
+			keptField.Descriptions = utils.Unique(append(keptField.Descriptions, field.Descriptions...))
+			mostFieldsStruct.Fields[field.Name] = keptField
+		}
+	}
+
+	return mostFieldsStruct
 }
 
 // Field defines the data required to generate a field in Go.
@@ -429,6 +471,6 @@ type Field struct {
 	// from the JSON schema.
 	Type string
 	// Required is set to true when the field is required.
-	Required    bool
-	Description string
+	Required     bool
+	Descriptions []string
 }

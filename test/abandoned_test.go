@@ -3,10 +3,10 @@ package test
 import (
 	"testing"
 
-	abandoned "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/abandoned/abandoned"
+	abandoned "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/abandoned"
 )
 
-//go:generate go run ../cmd/main.go --input ./samples/abandoned --output ./generated/abandoned
+//go:generate go run ../cmd/main.go --input ./samples/abandoned --output ./generated/abandoned/model.go
 
 func TestAbandoned(t *testing.T) {
 	// this just tests the name generation works correctly

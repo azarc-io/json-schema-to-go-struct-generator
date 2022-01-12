@@ -2,7 +2,8 @@ package test
 
 import (
 	"encoding/json"
-	gen "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/marshal"
+	model "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/marshal"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -11,7 +12,7 @@ import (
 func TestThatJSONCanBeRoundtrippedUsingGeneratedStructs(t *testing.T) {
 	j := `{"address":{"county":"countyValue"},"name":"nameValue"}`
 
-	e := &gen.Example{}
+	e := &model.Example{}
 	err := json.Unmarshal([]byte(j), e)
 
 	if err != nil {
@@ -31,4 +32,19 @@ func TestThatJSONCanBeRoundtrippedUsingGeneratedStructs(t *testing.T) {
 	if string(op) != j {
 		t.Errorf("expected %s, got %s", j, string(op))
 	}
+}
+
+func TestUnmarshalWithoutErrorButContainValidationErrors(t *testing.T) {
+	j := `{"address":{"line2":"foo line 2"},"name":"bar name", "zulu": "africa"}`
+
+	e := &model.Home{}
+	err := json.Unmarshal([]byte(j), e)
+	assert.Nil(t, err)
+	assert.Equal(t, "africa", e.Zulu)
+
+	errs := e.Address.Validate()
+	assert.Equal(t, 2, len(errs))
+	assert.Equal(t, "\"Line1\" is required but was not present: field required validation failed", errs[0].Error())
+	assert.ErrorIs(t, errs[0], model.ErrFieldRequired)
+	assert.ErrorIs(t, errs[1], model.ErrFieldRequired)
 }

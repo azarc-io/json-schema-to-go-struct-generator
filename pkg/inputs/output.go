@@ -50,6 +50,7 @@ func Output(w io.Writer, g *Generator, pkg string, originatingPaths []string) er
 		if s.GenerateCode {
 			emitMarshalCode(codeBuf, s, imports)
 			emitUnmarshalCode(codeBuf, s, imports)
+			emitValidationCode(codeBuf, s, imports)
 		}
 	}
 
@@ -59,6 +60,13 @@ func Output(w io.Writer, g *Generator, pkg string, originatingPaths []string) er
 			fmt.Fprintf(w, "    \"%s\"\n", k)
 		}
 		fmt.Fprintf(w, ")\n")
+	}
+
+	//add any additional top level helpers
+	if val := imports["errors"]; val {
+		fmt.Fprintf(w, `
+var ErrFieldRequired = errors.New("field required validation failed")
+`)
 	}
 
 	for _, k := range GetOrderedFieldNames(aliases) {
@@ -90,6 +98,11 @@ func Output(w io.Writer, g *Generator, pkg string, originatingPaths []string) er
 			}
 
 			fmt.Fprintf(w, "  %s %s `json:\"%s%s\"`\n", f.Name, f.Type, f.JSONName, omitempty)
+
+			// set marshal required
+			if f.Required {
+				fmt.Fprintf(w, "  _%s_ValidationError error\n\n", f.JSONName)
+			}
 		}
 
 		fmt.Fprintln(w, "}")
@@ -182,6 +195,9 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
 
 func emitUnmarshalCode(w io.Writer, s Struct, imports map[string]bool) {
 	imports["encoding/json"] = true
+	imports["errors"] = true
+	imports["fmt"] = true
+
 	// unmarshal code
 	fmt.Fprintf(w, `
 func (strct *%s) UnmarshalJSON(b []byte) error {
@@ -204,6 +220,7 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
 	if len(s.Fields) > 0 || s.AdditionalType != "false" {
 		needVal = "v"
 	}
+
 	// start the loop
 	fmt.Fprintf(w, `
     // parse all the defined properties
@@ -218,8 +235,8 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
 		}
 		fmt.Fprintf(w, `        case "%s":
             if err := json.Unmarshal([]byte(v), &strct.%s); err != nil {
-                return err
-             }
+				return err
+            }
 `, f.JSONName, f.Name)
 		if f.Required {
 			fmt.Fprintf(w, "            %sReceived = true\n", f.JSONName)
@@ -239,7 +256,7 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
             // an additional "%s" value
             var additionalValue %s
             if err := json.Unmarshal([]byte(v), &additionalValue); err != nil {
-                return err // invalid additionalProperty
+                return err
             }
             if strct.AdditionalProperties == nil {
                 strct.AdditionalProperties = make(map[string]%s, 0)
@@ -258,13 +275,45 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
 			imports["errors"] = true
 			fmt.Fprintf(w, `    // check if %s (a required property) was received
     if !%sReceived {
-        return errors.New("\"%s\" is required but was not present")
+		strct._%s_ValidationError = fmt.Errorf("\"%s\" is required but was not present: %%w", ErrFieldRequired)
     }
-`, f.JSONName, f.JSONName, f.JSONName)
+`, f.JSONName, f.JSONName, f.JSONName, f.Name)
 		}
 	}
 
 	fmt.Fprintf(w, "    return nil\n")
+	fmt.Fprintf(w, "}\n") // UnmarshalJSON
+}
+
+func emitValidationCode(w io.Writer, s Struct, imports map[string]bool) {
+	imports["encoding/json"] = true
+	imports["errors"] = true
+	imports["fmt"] = true
+
+	// unmarshal code
+	fmt.Fprintf(w, `
+func (strct *%s) Validate() []error {
+`, s.Name)
+	fmt.Fprintf(w, "    var allErrors []error\n")
+
+	// setup required bools
+	for _, fieldKey := range GetOrderedFieldNames(s.Fields) {
+		f := s.Fields[fieldKey]
+		if f.Required {
+			fmt.Fprintf(w, `    if strct._%s_ValidationError != nil {
+		allErrors = append(allErrors, strct._%s_ValidationError)
+	}	
+`, f.JSONName, f.JSONName)
+		}
+	}
+
+	fmt.Fprintf(w, `    if len(allErrors) > 0 {
+		return allErrors
+	}
+	
+	return nil
+`)
+
 	fmt.Fprintf(w, "}\n") // UnmarshalJSON
 }
 

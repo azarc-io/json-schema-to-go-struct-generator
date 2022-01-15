@@ -2,7 +2,10 @@ package test
 
 import (
 	"encoding/json"
+	"github.com/azarc-io/json-schema-to-go-struct-generator/pkg/converter"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"path"
 	"testing"
 
 	example1 "github.com/azarc-io/json-schema-to-go-struct-generator/test/generated/example1"
@@ -51,4 +54,12 @@ func TestMarshalValidateFail(t *testing.T) {
 	errs := prod.Validate()
 	assert.Equal(t, 1, len(errs))
 	assert.ErrorIs(t, errs[0], example1.ErrFieldRequired)
+}
+
+func TestGenerateExample(t *testing.T) {
+	files := []string{
+		path.Join(os.Getenv("PWD"), "./samples/example1/example1a.json"),
+	}
+	err := converter.Convert(files, "models", "./generated/example1/generate-example/all.go", true)
+	assert.Nil(t, err)
 }

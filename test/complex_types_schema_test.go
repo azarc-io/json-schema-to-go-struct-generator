@@ -33,8 +33,16 @@ func TestDoesNotContainDuplicateStructs(t *testing.T) {
 	}})
 }
 
-func TestGenerate(t *testing.T) {
+func TestGenerate1(t *testing.T) {
 	files := []string{path.Join(os.Getenv("PWD"), "./samples/complex-types/duplicate-structs-for-single-type-schema.json")}
-	err := converter.Convert(files, "models", "./generated/complex-types/test/duplicate-structs.go")
+	err := converter.Convert(files, "models", "./generated/complex-types/generate1/duplicate-structs.go", true)
+	assert.Nil(t, err)
+}
+
+func TestGenerate2(t *testing.T) {
+	files := []string{
+		path.Join(os.Getenv("PWD"), "./samples/complex-types/duplicate-structs-without-creating-duplicate-models-schema.json"),
+	}
+	err := converter.Convert(files, "models", "./generated/complex-types/generate2/test2.go", true)
 	assert.Nil(t, err)
 }

@@ -42,7 +42,7 @@ func TestApTrueNoProp(t *testing.T) {
 	typ := reflect.TypeOf(ap.AdditionalProperties["c"])
 
 	if c, ok := ap.AdditionalProperties["c"].(float64); !ok {
-		t.Fatalf("c was not an number (it was a %s)", typ.Name())
+		t.Fatalf("c was not an number (it was a %s)", typ.TypeInfo())
 	} else {
 		if c != 42 {
 			t.Fatalf("wrong value for c: \"%f\" (should be \"42\")", c)
@@ -74,7 +74,7 @@ func TestApTrueProp(t *testing.T) {
 	typ := reflect.TypeOf(ap.AdditionalProperties["c"])
 
 	if c, ok := ap.AdditionalProperties["c"].(float64); !ok {
-		t.Fatalf("c was not an number (it was a %s)", typ.Name())
+		t.Fatalf("c was not an number (it was a %s)", typ.TypeInfo())
 	} else {
 		if c != 42 {
 			t.Fatalf("wrong value for c: \"%f\" (should be \"42\")", c)
@@ -119,7 +119,7 @@ func TestApTrueReqProp(t *testing.T) {
 	typ := reflect.TypeOf(ap.AdditionalProperties["c"])
 
 	if c, ok := ap.AdditionalProperties["c"].(float64); !ok {
-		t.Fatalf("c was not an number (it was a %s)", typ.Name())
+		t.Fatalf("c was not an number (it was a %s)", typ.TypeInfo())
 	} else {
 		if c != 42 {
 			t.Fatalf("wrong value for c: \"%f\" (should be \"42\")", c)

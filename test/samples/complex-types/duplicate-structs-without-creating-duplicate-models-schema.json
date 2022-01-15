@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Foo",
+  "properties": {
+    "bar10": {
+      "properties": {
+        "person": {
+          "type": "object",
+          "title": "person",
+          "properties": {
+            "first": {
+              "type": "string"
+            },
+            "last": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "title": "Bar10",
+      "type": "object"
+    },
+    "bar11": {
+      "properties": {
+        "person1": {
+          "type": "object",
+          "title": "person",
+          "properties": {
+            "firstname": {
+              "type": "string"
+            },
+            "middlename": {
+              "type": "string"
+            },
+            "lastname": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "title": "Bar11",
+      "type": "object"
+    },
+    "bar12": {
+      "properties": {
+        "person": {
+          "type": "object",
+          "title": "person",
+          "properties": {
+            "firstname": {
+              "type": "string"
+            },
+            "lastname": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "title": "Bar12",
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

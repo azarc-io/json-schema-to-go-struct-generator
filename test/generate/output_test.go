@@ -8,7 +8,7 @@ import (
 )
 
 func TestThatFieldNamesAreOrdered(t *testing.T) {
-	m := map[string]js_inputs.Field{
+	m := map[string]*js_inputs.Field{
 		"z": {},
 		"b": {},
 	}
@@ -22,7 +22,7 @@ func TestThatFieldNamesAreOrdered(t *testing.T) {
 }
 
 func TestThatStructNamesAreOrdered(t *testing.T) {
-	m := map[string]js_inputs.Struct{
+	m := map[string]*js_inputs.Struct{
 		"c": {},
 		"b": {},
 		"a": {},

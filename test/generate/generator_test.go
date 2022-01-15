@@ -171,15 +171,15 @@ func TestFieldGenerationWithArrayReferences(t *testing.T) {
 	testField(g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property4"], "property4", "Property4", "[][]*Inner", false, t)
 }
 
-func testField(actual js_inputs.Field, expectedJSONName string, expectedName string, expectedType string, expectedToBeRequired bool, t *testing.T) {
+func testField(actual *js_inputs.Field, expectedJSONName string, expectedName string, expectedType string, expectedToBeRequired bool, t *testing.T) {
 	if actual.JSONName != expectedJSONName {
 		t.Errorf("JSONName - expected \"%s\", got \"%s\"", expectedJSONName, actual.JSONName)
 	}
 	if actual.Name != expectedName {
-		t.Errorf("Name - expected \"%s\", got \"%s\"", expectedName, actual.Name)
+		t.Errorf("TypeInfo - expected \"%s\", got \"%s\"", expectedName, actual.Name)
 	}
-	if actual.Type != expectedType {
-		t.Errorf("Type - expected \"%s\", got \"%s\"", expectedType, actual.Type)
+	if actual.Type.GetTypeAsString() != expectedType {
+		t.Errorf("TypeInfo - expected \"%s\", got \"%s\"", expectedType, actual.Type.GetTypeAsString())
 	}
 	if actual.Required != expectedToBeRequired {
 		t.Errorf("Required - expected \"%v\", got \"%v\"", expectedToBeRequired, actual.Required)
@@ -222,8 +222,8 @@ func TestNestedStructGeneration(t *testing.T) {
 		t.Errorf("The Property1 type should have been made, but only types %s were made.", strings.Join(getStructNamesFromMap(results), ", "))
 	}
 
-	if results["Example"].Fields["Property1"].Type != "*Property1" {
-		t.Errorf("Expected that the nested type property1 is generated as a struct, so the property type should be *Property1, but was %s.", results["Example"].Fields["Property1"].Type)
+	if results["Example"].Fields["Property1"].Type.GetTypeAsString() != "*Property1" {
+		t.Errorf("Expected that the nested type property1 is generated as a struct, so the property type should be *Property1, but was %s.", results["Example"].Fields["Property1"].Type.GetTypeAsString())
 	}
 }
 
@@ -263,15 +263,15 @@ func TestEmptyNestedStructGeneration(t *testing.T) {
 		t.Errorf("The Property1 type should have been made, but only types %s were made.", strings.Join(getStructNamesFromMap(results), ", "))
 	}
 
-	if results["Example"].Fields["Property1"].Type != "*Property1" {
-		t.Errorf("Expected that the nested type property1 is generated as a struct, so the property type should be *Property1, but was %s.", results["Example"].Fields["Property1"].Type)
+	if results["Example"].Fields["Property1"].Type.GetTypeAsString() != "*Property1" {
+		t.Errorf("Expected that the nested type property1 is generated as a struct, so the property type should be *Property1, but was %s.", results["Example"].Fields["Property1"].Type.GetTypeAsString())
 	}
 }
 
 func TestStructNameExtractor(t *testing.T) {
-	m := make(map[string]js_inputs.Struct)
-	m["name1"] = js_inputs.Struct{}
-	m["name2"] = js_inputs.Struct{}
+	m := make(map[string]*js_inputs.Struct)
+	m["name1"] = &js_inputs.Struct{}
+	m["name2"] = &js_inputs.Struct{}
 
 	names := getStructNamesFromMap(m)
 	if len(names) != 2 {
@@ -287,7 +287,7 @@ func TestStructNameExtractor(t *testing.T) {
 	}
 }
 
-func getStructNamesFromMap(m map[string]js_inputs.Struct) []string {
+func getStructNamesFromMap(m map[string]*js_inputs.Struct) []string {
 	sn := make([]string, len(m))
 	i := 0
 	for k := range m {
@@ -361,7 +361,7 @@ func TestArrayGeneration(t *testing.T) {
 
 	artistStruct, ok := results["Artist"]
 	if !ok {
-		t.Errorf("Expected Name to be Artist, that wasn't found, but the struct contains \"%+v\"", results)
+		t.Errorf("Expected TypeInfo to be Artist, that wasn't found, but the struct contains \"%+v\"", results)
 	}
 
 	if len(artistStruct.Fields) != 2 {
@@ -430,8 +430,8 @@ func TestNestedArrayGeneration(t *testing.T) {
 	if !ok {
 		t.Errorf("Expected to find the Cities field on the FavouriteBars, but didn't. The struct is %+v", fbStruct)
 	}
-	if f.Type != "[]*City" {
-		t.Errorf("Expected to find that the Cities array was of type *City, but it was of %s", f.Type)
+	if f.Type.GetTypeAsString() != "[]*City" {
+		t.Errorf("Expected to find that the Cities array was of type *City, but it was of %s", f.Type.GetTypeAsString())
 	}
 
 	f, ok = fbStruct.Fields["Tags"]
@@ -439,8 +439,8 @@ func TestNestedArrayGeneration(t *testing.T) {
 		t.Errorf("Expected to find the Tags field on the FavouriteBars, but didn't. The struct is %+v", fbStruct)
 	}
 
-	if f.Type != "[]string" {
-		t.Errorf("Expected to find that the Tags array was of type string, but it was of %s", f.Type)
+	if f.Type.GetTypeAsString() != "[]string" {
+		t.Errorf("Expected to find that the Tags array was of type string, but it was of %s", f.Type.GetTypeAsString())
 	}
 
 	cityStruct, ok := results["City"]
@@ -449,7 +449,7 @@ func TestNestedArrayGeneration(t *testing.T) {
 	}
 
 	if _, ok := cityStruct.Fields["Name"]; !ok {
-		t.Errorf("Expected to find the Name field on the City struct, but didn't. The struct is %+v", cityStruct)
+		t.Errorf("Expected to find the TypeInfo field on the City struct, but didn't. The struct is %+v", cityStruct)
 	}
 
 	if _, ok := cityStruct.Fields["Country"]; !ok {
@@ -495,8 +495,8 @@ func TestMultipleSchemaStructGeneration(t *testing.T) {
 		t.Error("Failed to create structs: ", err)
 	}
 
-	if len(results) != 3 {
-		t.Errorf("3 results should have been created, 2 root types and an address, but got %v", getStructNamesFromMap(results))
+	if len(results) != 2 {
+		t.Errorf("2 results should have been created, 1 consolidated root type and an address, but got %v", getStructNamesFromMap(results))
 	}
 }
 
@@ -585,8 +585,8 @@ func TestThatArraysWithoutDefinedItemTypesAreGeneratedAsEmptyInterfaces(t *testi
 
 	if o, ok := results["ArrayWithoutDefinedItem"]; ok {
 		if f, ok := o.Fields["Repositories"]; ok {
-			if f.Type != "[]interface{}" {
-				t.Errorf("Since the js_inputs.Schema doesn't include a type for the array items, the property type should be []interface{}, but was %s.", f.Type)
+			if f.Type.GetTypeAsString() != "[]interface{}" {
+				t.Errorf("Since the js_inputs.Schema doesn't include a type for the array items, the property type should be []interface{}, but was %s.", f.Type.GetTypeAsString())
 			}
 		} else {
 			t.Errorf("Expected the ArrayWithoutDefinedItem type to have a Repostitories field, but none was found.")
@@ -619,11 +619,11 @@ func TestThatTypesWithMultipleDefinitionsAreGeneratedAsEmptyInterfaces(t *testin
 
 	if o, ok := results["MultiplePossibleTypes"]; ok {
 		if f, ok := o.Fields["Name"]; ok {
-			if f.Type != "interface{}" {
-				t.Errorf("Since the js_inputs.Schema has multiple types for the item, the property type should be []interface{}, but was %s.", f.Type)
+			if f.Type.GetTypeAsString() != "interface{}" {
+				t.Errorf("Since the js_inputs.Schema has multiple types for the item, the property type should be []interface{}, but was %s.", f.Type.GetTypeAsString())
 			}
 		} else {
-			t.Errorf("Expected the MultiplePossibleTypes type to have a Name field, but none was found.")
+			t.Errorf("Expected the MultiplePossibleTypes type to have a TypeInfo field, but none was found.")
 		}
 	}
 }
@@ -681,7 +681,7 @@ func TestThatUnmarshallingIsPossible(t *testing.T) {
 		expectedType := reflect.TypeOf(test.expected.Name)
 		actualType := reflect.TypeOf(actual.Name)
 		if expectedType != actualType {
-			t.Errorf("expected Name to be of type %v, but got %v", expectedType, actualType)
+			t.Errorf("expected TypeInfo to be of type %v, but got %v", expectedType, actualType)
 		}
 	}
 }
@@ -771,8 +771,8 @@ func TestTypeAliases(t *testing.T) {
 			t.Errorf("Expected %d type aliases, got %d", test.aliases, len(aliases))
 		}
 
-		if test.gotype != aliases["Root"].Type {
-			t.Errorf("Expected Root type %q, got %q", test.gotype, aliases["Root"].Type)
+		if test.gotype != aliases["Root"].Type.GetTypeAsString() {
+			t.Errorf("Expected Root type %q, got %q", test.gotype, aliases["Root"].Type.GetTypeAsString())
 		}
 	}
 }

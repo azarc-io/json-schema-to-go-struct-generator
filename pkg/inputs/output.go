@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func GetOrderedFieldNames(m map[string]Field) []string {
+func GetOrderedFieldNames(m map[string]*Field) []string {
 	keys := make([]string, len(m))
 	idx := 0
 	for k := range m {
@@ -19,7 +19,7 @@ func GetOrderedFieldNames(m map[string]Field) []string {
 	return keys
 }
 
-func GetOrderedStructNames(m map[string]Struct) []string {
+func GetOrderedStructNames(m map[string]*Struct) []string {
 	keys := make([]string, len(m))
 	idx := 0
 	for k := range m {
@@ -31,7 +31,7 @@ func GetOrderedStructNames(m map[string]Struct) []string {
 }
 
 // Output generates code and writes to w.
-func Output(w io.Writer, g *Generator, pkg string, originatingPaths []string) error {
+func Output(w io.Writer, g *Generator, pkg string, originatingPaths []string, debug bool) error {
 	structs := g.Structs
 	aliases := g.Aliases
 
@@ -72,17 +72,21 @@ var ErrFieldRequired = errors.New("field required validation failed")
 	for _, k := range GetOrderedFieldNames(aliases) {
 		a := aliases[k]
 
+		pt, err := a.Type.getPrimitiveTypeName()
+		if err != nil {
+			return err
+		}
 		fmt.Fprintln(w, "")
 		fmt.Fprintf(w, "// %s\n", a.Name)
-		fmt.Fprintf(w, "type %s %s\n", a.Name, a.Type)
+		fmt.Fprintf(w, "type %s %s\n", a.Name, pt)
 	}
 
 	for _, k := range GetOrderedStructNames(structs) {
 		s := structs[k]
 
 		fmt.Fprintln(w, "")
-		outputNameAndDescriptionComment(s.Name, s.Description, w)
-		fmt.Fprintf(w, "type %s struct {\n", s.Name)
+		outputNameAndDescriptionComment(s.TypeInfo.String(), s.Description, w)
+		fmt.Fprintf(w, "type %s struct {\n", s.TypeInfo)
 
 		for _, fieldKey := range GetOrderedFieldNames(s.Fields) {
 			f := s.Fields[fieldKey]
@@ -97,7 +101,16 @@ var ErrFieldRequired = errors.New("field required validation failed")
 				outputFieldDescriptionComment(f.Descriptions, w)
 			}
 
-			fmt.Fprintf(w, "  %s %s `json:\"%s%s\"`\n", f.Name, f.Type, f.JSONName, omitempty)
+			primName, err := f.Type.getPrimitiveTypeName()
+			if err != nil {
+				return err
+			}
+
+			if debug {
+				fmt.Fprintf(w, "  %s %s `json:\"%s%s\"` // s:%s, f:%s\n", f.Name, primName, f.JSONName, omitempty, f.Type.Id, f.Id)
+			} else {
+				fmt.Fprintf(w, "  %s %s `json:\"%s%s\"`\n", f.Name, primName, f.JSONName, omitempty)
+			}
 
 			// set marshal required
 			if f.Required {
@@ -113,14 +126,14 @@ var ErrFieldRequired = errors.New("field required validation failed")
 	return err
 }
 
-func emitMarshalCode(w io.Writer, s Struct, imports map[string]bool) {
+func emitMarshalCode(w io.Writer, s *Struct, imports map[string]bool) {
 	imports["bytes"] = true
 	fmt.Fprintf(w,
 		`
 func (strct *%s) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0))
 	buf.WriteString("{")
-`, s.Name)
+`, s.TypeInfo)
 
 	if len(s.Fields) > 0 {
 		fmt.Fprintf(w, "    comma := false\n")
@@ -133,7 +146,7 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
 			if f.Required {
 				fmt.Fprintf(w, "    // \"%s\" field is required\n", f.Name)
 				// currently only objects are supported
-				if strings.HasPrefix(f.Type, "*") {
+				if strings.HasPrefix(f.Type.Name, "*") {
 					imports["errors"] = true
 					fmt.Fprintf(w, `    if strct.%s == nil {
         return nil, errors.New("%s is a required field")
@@ -159,17 +172,16 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
 `, f.JSONName, f.Name)
 		}
 	}
-	if s.AdditionalType != "" {
-		if s.AdditionalType != "false" {
-			imports["fmt"] = true
+	if s.AdditionalType != nil && s.AdditionalType.PrimitiveType != "boolean" && s.AdditionalType.Name != "false" {
+		imports["fmt"] = true
 
-			if len(s.Fields) == 0 {
-				fmt.Fprintf(w, "    comma := false\n")
-			}
+		if len(s.Fields) == 0 {
+			fmt.Fprintf(w, "    comma := false\n")
+		}
 
-			fmt.Fprintf(w, "    // Marshal any additional Properties\n")
-			// Marshal any additional Properties
-			fmt.Fprintf(w, `    for k, v := range strct.AdditionalProperties {
+		fmt.Fprintf(w, "    // Marshal any additional Properties\n")
+		// Marshal any additional Properties
+		fmt.Fprintf(w, `    for k, v := range strct.AdditionalProperties {
 		if comma {
 			buf.WriteString(",")
 		}
@@ -182,7 +194,6 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
         comma = true
 	}
 `)
-		}
 	}
 
 	fmt.Fprintf(w, `
@@ -193,7 +204,7 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
 `)
 }
 
-func emitUnmarshalCode(w io.Writer, s Struct, imports map[string]bool) {
+func emitUnmarshalCode(w io.Writer, s *Struct, imports map[string]bool) {
 	imports["encoding/json"] = true
 	imports["errors"] = true
 	imports["fmt"] = true
@@ -201,7 +212,7 @@ func emitUnmarshalCode(w io.Writer, s Struct, imports map[string]bool) {
 	// unmarshal code
 	fmt.Fprintf(w, `
 func (strct *%s) UnmarshalJSON(b []byte) error {
-`, s.Name)
+`, s.TypeInfo)
 	// setup required bools
 	for _, fieldKey := range GetOrderedFieldNames(s.Fields) {
 		f := s.Fields[fieldKey]
@@ -217,7 +228,7 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
 
 	// figure out if we need the "v" output of the range keyword
 	needVal := "_"
-	if len(s.Fields) > 0 || s.AdditionalType != "false" {
+	if len(s.Fields) > 0 || s.AdditionalType != nil {
 		needVal = "v"
 	}
 
@@ -244,14 +255,18 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
 	}
 
 	// handle additional property
-	if s.AdditionalType != "" {
-		if s.AdditionalType == "false" {
+	if s.AdditionalType != nil {
+		if s.AdditionalType.PrimitiveType == "boolean" && s.AdditionalType.Name == "false" {
 			// all unknown properties are not allowed
 			imports["fmt"] = true
 			fmt.Fprintf(w, `        default:
             return fmt.Errorf("additional property not allowed: \"" + k + "\"")
 `)
 		} else {
+			pt, err := s.AdditionalType.getPrimitiveTypeName()
+			if err != nil {
+				fmt.Printf("error retrieving primitive type for %s (%s): %s\n", s.AdditionalType.Name, s.AdditionalType.Id, err)
+			}
 			fmt.Fprintf(w, `        default:
             // an additional "%s" value
             var additionalValue %s
@@ -262,7 +277,7 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
                 strct.AdditionalProperties = make(map[string]%s, 0)
             }
             strct.AdditionalProperties[k]= additionalValue
-`, s.AdditionalType, s.AdditionalType, s.AdditionalType)
+`, pt, pt, pt)
 		}
 	}
 	fmt.Fprintf(w, "        }\n") // switch
@@ -285,7 +300,7 @@ func (strct *%s) UnmarshalJSON(b []byte) error {
 	fmt.Fprintf(w, "}\n") // UnmarshalJSON
 }
 
-func emitValidationCode(w io.Writer, s Struct, imports map[string]bool) {
+func emitValidationCode(w io.Writer, s *Struct, imports map[string]bool) {
 	imports["encoding/json"] = true
 	imports["errors"] = true
 	imports["fmt"] = true
@@ -293,7 +308,7 @@ func emitValidationCode(w io.Writer, s Struct, imports map[string]bool) {
 	// unmarshal code
 	fmt.Fprintf(w, `
 func (strct *%s) Validate() []error {
-`, s.Name)
+`, s.TypeInfo)
 	fmt.Fprintf(w, "    var allErrors []error\n")
 
 	// setup required bools

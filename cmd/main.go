@@ -20,7 +20,7 @@ func main() {
 	}
 
 	fmt.Printf("Processing files: %v\n", files)
-	err = converter.Convert(files, "models", outPath)
+	err = converter.Convert(files, "models", outPath, false)
 
 	if err != nil {
 		panic(err)

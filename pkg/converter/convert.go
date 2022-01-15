@@ -9,7 +9,7 @@ import (
 	"sort"
 )
 
-func Convert(inputFiles []string, packageName string, outputFile string) error {
+func Convert(inputFiles []string, packageName string, outputFile string, debug bool) error {
 	//ensure that files are aways processed in deterministic order
 	sort.Strings(inputFiles)
 
@@ -21,7 +21,7 @@ func Convert(inputFiles []string, packageName string, outputFile string) error {
 	generatorInstance := inputs.New(schemas...) // instance of generator which will produce structs
 	err = generatorInstance.CreateTypes()
 	if err != nil {
-		return errors.Wrapf(err, "error while generating instance for  proudcing structs")
+		return errors.Wrapf(err, "error while generating instance for producing structs")
 	}
 
 	packageDirectory := filepath.Dir(outputFile)
@@ -36,5 +36,5 @@ func Convert(inputFiles []string, packageName string, outputFile string) error {
 		return errors.Wrapf(err, "error while creating output file")
 	}
 
-	return inputs.Output(w, generatorInstance, packageName, inputFiles)
+	return inputs.Output(w, generatorInstance, packageName, inputFiles, debug)
 }

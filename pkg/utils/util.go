@@ -3,8 +3,10 @@ package utils
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func FileNameCreation(fileName string) string {
@@ -63,7 +65,7 @@ func ParseFlags() Flags {
 	}
 }
 
-func Unique(slice []string) []string {
+func UniqueStrings(slice []string) []string {
 	// create a map with all the values as key
 	uniqMap := make(map[string]struct{})
 	for _, v := range slice {
@@ -76,4 +78,11 @@ func Unique(slice []string) []string {
 		uniqSlice = append(uniqSlice, v)
 	}
 	return uniqSlice
+}
+
+func RandomString(length int) string {
+	rand.Seed(time.Now().UnixNano() + rand.Int63())
+	b := make([]byte, length)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)[:length]
 }

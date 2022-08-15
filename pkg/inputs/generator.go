@@ -248,6 +248,7 @@ func (g *Generator) processSchema(schemaName string, schema *Schema) (typ *TypeI
 				}
 			default:
 				rv := NewTypeInfo(schemaType, schemaType, false, nil)
+				rv.Format = schema.Format
 				if !isMultiType {
 					return rv, nil
 				}
@@ -567,6 +568,7 @@ type TypeInfo struct {
 	isRootType       bool
 	referencedFields map[string]*Field
 	aliasFor         []string
+	Format           Format
 }
 
 func (p *TypeInfo) ShortName() string {
@@ -648,7 +650,12 @@ func (p *TypeInfo) getPrimitiveTypeName() (name string, err error) {
 		}
 		return p.String(), nil
 	case "string":
-		return "string", nil
+		switch p.Format {
+		case FormatDatetime:
+			return "*time.Time", nil
+		default:
+			return "string", nil
+		}
 	case "interface":
 		return "interface{}", nil
 	case "map":

@@ -1,0 +1,11 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "DatetimeValue",
+    "type": "object",
+    "properties": {
+        "myDate": {
+            "type": "string",
+            "format": "datetime"
+        }
+    }
+}

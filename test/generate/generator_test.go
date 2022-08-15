@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	js_inputs "github.com/azarc-io/json-schema-to-go-struct-generator/pkg/inputs"
 	_ "github.com/azarc-io/json-schema-to-go-struct-generator/pkg/utils"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"strings"
 	"testing"
@@ -775,6 +776,41 @@ func TestTypeAliases(t *testing.T) {
 			t.Errorf("Expected Root type %q, got %q", test.gotype, aliases["Root"].Type.GetTypeAsString())
 		}
 	}
+}
+
+func TestDatetimeGeneration(t *testing.T) {
+	root := &js_inputs.Schema{}
+	root.Title = "Example"
+	root.Properties = map[string]*js_inputs.Schema{
+		"myDate": {
+			TypeValue: "string",
+			Format:    js_inputs.FormatDatetime,
+		},
+	}
+
+	root.Init()
+
+	g := js_inputs.New(root)
+	err := g.CreateTypes()
+	results := g.Structs
+
+	if err != nil {
+		t.Error("Failed to create structs: ", err)
+	}
+
+	if len(results) != 1 {
+		t.Errorf("1 results should have been created, a root type and a type for the object 'myDate' but %d structs were made", len(results))
+	}
+
+	if _, contains := results["Example"]; !contains {
+		t.Errorf("The Example type should have been made, but only types %s were made.", strings.Join(getStructNamesFromMap(results), ", "))
+	}
+
+	myDateType := results["Example"].Fields["MyDate"].Type
+	if myDateType.GetTypeAsString() != "*time.Time" {
+		t.Errorf("Expected that the nested type MyDate is generated as a datetime, but was %s.", myDateType.GetTypeAsString())
+	}
+	assert.Equal(t, js_inputs.FormatDatetime, myDateType.Format)
 }
 
 // Root is an example of a generated type.

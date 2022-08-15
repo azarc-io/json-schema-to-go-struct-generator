@@ -47,6 +47,8 @@ func Output(w io.Writer, g *Generator, pkg string, originatingPaths []string, de
 
 	for _, k := range GetOrderedStructNames(structs) {
 		s := structs[k]
+		addAdditionalImports(s, imports)
+
 		if s.GenerateCode {
 			emitMarshalCode(codeBuf, s, imports)
 			emitUnmarshalCode(codeBuf, s, imports)
@@ -122,8 +124,23 @@ var ErrFieldRequired = errors.New("field required validation failed")
 	}
 
 	// write code after structs for clarity
-	_,err := w.Write(codeBuf.Bytes())
+	_, err := w.Write(codeBuf.Bytes())
 	return err
+}
+
+func addAdditionalImports(s *Struct, imports map[string]bool) {
+	if len(s.Fields) > 0 {
+		for _, f := range s.Fields {
+			addAdditionalImportsByField(f, imports)
+		}
+	}
+}
+
+func addAdditionalImportsByField(f *Field, imports map[string]bool) {
+	switch f.Type.Format {
+	case FormatDatetime:
+		imports["time"] = true
+	}
 }
 
 func emitMarshalCode(w io.Writer, s *Struct, imports map[string]bool) {
@@ -140,6 +157,7 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
 		// Marshal all the defined fields
 		for _, fieldKey := range GetOrderedFieldNames(s.Fields) {
 			f := s.Fields[fieldKey]
+
 			if f.JSONName == "-" {
 				continue
 			}

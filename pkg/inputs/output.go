@@ -140,14 +140,31 @@ func addAdditionalImportsByField(f *Field, imports map[string]bool) {
 	switch f.Type.Format {
 	case FormatDatetime:
 		imports["time"] = true
+	case FormatUUID:
+		imports["github.com/google/uuid"] = true
 	}
 }
 
 func emitMarshalCode(w io.Writer, s *Struct, imports map[string]bool) {
 	imports["bytes"] = true
+	imports["reflect"] = true
 	fmt.Fprintf(w,
 		`
-func (strct *%s) MarshalJSON() ([]byte, error) {
+func (strct *%[1]s) isEmpty(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+  	if reflect.ValueOf(v).IsZero() {
+		return true
+	}
+	if s, ok := v.(string); ok && s == "" {
+		return true
+	}
+
+	return false
+}
+
+func (strct *%[1]s) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0))
 	buf.WriteString("{")
 `, s.TypeInfo)
@@ -177,17 +194,19 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
 
 			fmt.Fprintf(w,
 				`    // Marshal the "%[1]s" field
-    if comma {
-        buf.WriteString(",")
+    if %[3]t || !strct.isEmpty(strct.%[2]s) {
+		if comma {
+			buf.WriteString(",")
+		}
+		buf.WriteString("\"%[1]s\": ")
+		if tmp, err := json.Marshal(strct.%[2]s); err != nil {
+			return nil, err
+		} else {
+			buf.Write(tmp)
+		}
+		comma = true
     }
-    buf.WriteString("\"%[1]s\": ")
-	if tmp, err := json.Marshal(strct.%[2]s); err != nil {
-		return nil, err
-	} else {
-		buf.Write(tmp)
-	}
-	comma = true
-`, f.JSONName, f.Name)
+`, f.JSONName, f.Name, f.Required)
 		}
 	}
 	if s.AdditionalType != nil && s.AdditionalType.PrimitiveType != "boolean" && s.AdditionalType.Name != "false" {

@@ -653,6 +653,8 @@ func (p *TypeInfo) getPrimitiveTypeName() (name string, err error) {
 		switch p.Format {
 		case FormatDatetime:
 			return "*time.Time", nil
+		case FormatUUID:
+			return "*uuid.UUID", err
 		default:
 			return "string", nil
 		}

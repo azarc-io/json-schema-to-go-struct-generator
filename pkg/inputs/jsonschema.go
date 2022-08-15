@@ -13,6 +13,7 @@ type Format string
 
 const (
 	FormatDatetime Format = "datetime"
+	FormatUUID     Format = "uuid"
 )
 
 // Schema represents JSON schema.

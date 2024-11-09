@@ -9,6 +9,13 @@ import (
 // AdditionalProperties handles additional properties present in the JSON schema.
 type AdditionalProperties Schema
 
+type Format string
+
+const (
+	FormatDatetime Format = "datetime"
+	FormatUUID     Format = "uuid"
+)
+
 // Schema represents JSON schema.
 type Schema struct {
 	// SchemaType identifies the schema version.
@@ -36,6 +43,8 @@ type Schema struct {
 	// http://json-schema.org/draft-07/json-schema-validation.html#rfc.section.6.5
 	Properties map[string]*Schema
 	Required   []string
+
+	Format Format `json:"format"`
 
 	// "additionalProperties": {...}
 	AdditionalProperties *AdditionalProperties

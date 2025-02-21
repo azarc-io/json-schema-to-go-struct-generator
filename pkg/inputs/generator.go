@@ -71,6 +71,64 @@ func (g *Generator) CreateTypes() (err error) {
 	return g.consolidateStructsAndTypes()
 }
 
+func (g *Generator) GetFieldType(field *Field) *Struct {
+	if field == nil || field.Type == nil {
+		return nil
+	}
+	structs := g.structCache[field.Type.Name]
+	for _, s := range structs {
+		if _, ok := s.TypeInfo.referencedFields[field.Id]; ok {
+			return s
+		}
+	}
+	return nil
+}
+
+func (g *Generator) UnifyStructs(struct1, struct2 *Struct) *Struct {
+	leastFieldsStruct := struct1
+	mostFieldsStruct := struct2
+	if len(struct1.Fields) > len(struct2.Fields) {
+		leastFieldsStruct = struct2
+		mostFieldsStruct = struct1
+	}
+
+	//check if all fields from the "leastFields" are available in "mostFields"
+	for _, leastField := range leastFieldsStruct.Fields {
+		if mostField, ok := mostFieldsStruct.Fields[leastField.Name]; ok {
+			if mostField.Type.Name != leastField.Type.Name {
+				return nil
+			}
+			mostFieldType := g.GetFieldType(mostField)
+			leastFieldType := g.GetFieldType(leastField)
+			if mostFieldType == leastFieldType {
+				continue // fields have the same type
+			}
+			if g.UnifyStructs(mostFieldType, leastFieldType) == nil {
+				return nil // fields have different types
+			}
+		} else {
+			return nil
+		}
+	}
+
+	//all fields are matchable, merge them together
+	for _, notKeptField := range leastFieldsStruct.Fields {
+		if keptField, ok := mostFieldsStruct.Fields[notKeptField.Name]; ok {
+			keptField.Descriptions = utils.UniqueStrings(append(keptField.Descriptions, notKeptField.Descriptions...))
+		}
+	}
+
+	fmt.Printf("TypeInfo: %s: Replacing: %s\n", mostFieldsStruct.TypeInfo.Id, leastFieldsStruct.TypeInfo.Id)
+	mostFieldsStruct.TypeInfo.Replaces(leastFieldsStruct.TypeInfo)
+
+	fmt.Printf("TypeInfo: %s: Replaced: %s\n", mostFieldsStruct.TypeInfo.Id, leastFieldsStruct.TypeInfo.Id)
+	for _, f := range mostFieldsStruct.TypeInfo.referencedFields {
+		fmt.Printf("TypeInfo: %s: Replaced: %s: Field Name: %s: Field Id: %s: Field Type: %s\n", mostFieldsStruct.TypeInfo.Id, leastFieldsStruct.TypeInfo.Id, f.Name, f.Id, f.Type.Id)
+	}
+
+	return mostFieldsStruct
+}
+
 func (g *Generator) consolidateStructsAndTypes() error {
 	var allStructs []*Struct
 	for shortKey, cacheItem := range g.structCache {
@@ -89,7 +147,7 @@ func (g *Generator) consolidateStructsAndTypes() error {
 				if structs[j] == nil {
 					continue
 				}
-				if out := structs[i].unifiedWith(structs[j]); out != nil {
+				if out := g.UnifyStructs(structs[i], structs[j]); out != nil {
 					structs[i] = nil
 					structs[j] = out
 					break
@@ -145,7 +203,7 @@ func (g *Generator) addStruct(item *Struct) error {
 		strctIsAlias := strct.TypeInfo.IsAlias()
 
 		//if this can be merged, remove existing struct, create and add both as aliasFor of new Struct
-		if merged := strct.unifiedWith(item); merged != nil {
+		if merged := g.UnifyStructs(strct, item); merged != nil {
 			f1FieldName := strct.TypeInfo.String()
 			f2FieldName := item.TypeInfo.String()
 
@@ -492,43 +550,6 @@ type Struct struct {
 
 	GenerateCode   bool
 	AdditionalType *TypeInfo
-}
-
-func (s *Struct) unifiedWith(other *Struct) *Struct {
-	leastFieldsStruct := s
-	mostFieldsStruct := other
-	if len(s.Fields) > len(other.Fields) {
-		leastFieldsStruct = other
-		mostFieldsStruct = s
-	}
-
-	//check if all fields from the "leastFields" are available in "mostFields"
-	for _, leastField := range leastFieldsStruct.Fields {
-		if mostField, ok := mostFieldsStruct.Fields[leastField.Name]; ok {
-			if mostField.Type.Name != leastField.Type.Name {
-				return nil
-			}
-		} else {
-			return nil
-		}
-	}
-
-	//all fields are matchable, merge them together
-	for _, notKeptField := range leastFieldsStruct.Fields {
-		if keptField, ok := mostFieldsStruct.Fields[notKeptField.Name]; ok {
-			keptField.Descriptions = utils.UniqueStrings(append(keptField.Descriptions, notKeptField.Descriptions...))
-		}
-	}
-
-	fmt.Printf("TypeInfo: %s: Replacing: %s\n", mostFieldsStruct.TypeInfo.Id, leastFieldsStruct.TypeInfo.Id)
-	mostFieldsStruct.TypeInfo.Replaces(leastFieldsStruct.TypeInfo)
-
-	fmt.Printf("TypeInfo: %s: Replaced: %s\n", mostFieldsStruct.TypeInfo.Id, leastFieldsStruct.TypeInfo.Id)
-	for _, f := range mostFieldsStruct.TypeInfo.referencedFields {
-		fmt.Printf("TypeInfo: %s: Replaced: %s: Field Name: %s: Field Id: %s: Field Type: %s\n", mostFieldsStruct.TypeInfo.Id, leastFieldsStruct.TypeInfo.Id, f.Name, f.Id, f.Type.Id)
-	}
-
-	return mostFieldsStruct
 }
 
 // Field defines the data required to generate a field in Go.

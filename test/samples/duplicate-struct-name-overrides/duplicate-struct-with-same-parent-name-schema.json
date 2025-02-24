@@ -1,0 +1,38 @@
+{
+  "properties": {
+    "propA": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "object",
+          "properties": {
+            "dup": {
+              "type": "object",
+              "properties": {
+                "prop1": {"type": "string"},
+                "prop2": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "propB": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "object",
+          "properties": {
+            "dup": {
+              "type": "object",
+              "properties": {
+                "prop3": {"type": "string"},
+                "prop4": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
